@@ -1,9 +1,11 @@
 """
-Health check endpoints
+Ehreezoh - Health Check API
+System health and status monitoring
 """
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from datetime import datetime
 import redis
 
@@ -23,7 +25,7 @@ async def health_check(db: Session = Depends(get_db)):
     # Check database connection
     db_status = "healthy"
     try:
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
     except Exception as e:
         db_status = f"unhealthy: {str(e)}"
     

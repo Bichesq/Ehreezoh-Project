@@ -1,6 +1,6 @@
 """
-Application configuration
-Loads settings from environment variables
+Ehreezoh - Application Configuration
+Environment variables and settings management
 """
 
 from pydantic_settings import BaseSettings
@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     """Application settings"""
     
     # Application
-    APP_NAME: str = "Cameroon Traffic App"
+    APP_NAME: str = "Ehreezoh"
     APP_VERSION: str = "1.0.0"
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     FIREBASE_PROJECT_ID: str = ""
     
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8081"]
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:3001", "http://localhost:8081"]
     CORS_ALLOW_CREDENTIALS: bool = True
     
     # JWT
@@ -102,10 +102,10 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
-    SMTP_FROM_EMAIL: str = "noreply@trafficcm.app"
+    SMTP_FROM_EMAIL: str = "noreply@ehreezoh.app"
     
     # Admin
-    ADMIN_EMAIL: str = "admin@trafficcm.app"
+    ADMIN_EMAIL: str = "admin@ehreezoh.app"
     ADMIN_PHONE: str = "+237000000000"
     
     class Config:

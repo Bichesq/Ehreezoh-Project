@@ -1,3 +1,3 @@
-"""Cameroon Traffic App Backend"""
+"""Ehreezoh Backend"""
 __version__ = "1.0.0"
 

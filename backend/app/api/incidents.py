@@ -1,5 +1,6 @@
 """
-Incidents endpoints
+Ehreezoh - Incidents API
+Report and track road incidents (accidents, hazards, etc.)
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
@@ -94,10 +95,10 @@ async def get_nearby_incidents(
             "incidents": [
                 {
                     "id": "placeholder-uuid-1",
-                    "type": "traffic_jam",
+                    "type": "road_hazard",
                     "location": {"lat": latitude + 0.01, "lng": longitude + 0.01},
                     "severity": 3,
-                    "description": "Heavy traffic on main road",
+                    "description": "Pothole on main road",
                     "image_url": None,
                     "upvotes": 5,
                     "downvotes": 0,

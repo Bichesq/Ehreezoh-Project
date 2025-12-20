@@ -1,19 +1,19 @@
 """
-Cameroon Traffic App - FastAPI Backend
+Ehreezoh - Mobile-First Ride-Hailing Platform
 Main application entry point
 """
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from contextlib import asynccontextmanager
 import logging
 import time
 
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.api import auth, incidents, users, health
+from app.api import auth, incidents, users, health, drivers, rides, websocket, admin
 
 # Configure logging
 logging.basicConfig(
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
-    logger.info("Starting Cameroon Traffic App API...")
+    logger.info("Starting Ehreezoh API...")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     logger.info(f"Debug mode: {settings.DEBUG}")
     
@@ -39,27 +39,95 @@ async def lifespan(app: FastAPI):
     yield
     
     # Shutdown
-    logger.info("Shutting down Cameroon Traffic App API...")
+    logger.info("Shutting down Ehreezoh API...")
 
 
 # Initialize FastAPI app
 app = FastAPI(
-    title=settings.APP_NAME,
+    title="Ehreezoh API",
     version=settings.APP_VERSION,
-    description="Real-time traffic reporting API for Cameroon",
+    description="""
+## Mobile-First Ride-Hailing Platform for Cameroon
+
+**Ehreezoh** connects passengers with moto-taxi and car drivers across Cameroon.
+
+### Features
+- 🚕 **Ride Hailing**: Request moto-taxis and cars on-demand
+- 📍 **Real-time Tracking**: Live driver location updates
+- 💰 **Mobile Money**: MTN Mobile Money and Orange Money integration
+- ⭐ **Ratings**: Two-way rating system for drivers and passengers
+- 🔒 **Secure**: Firebase Phone Authentication + JWT tokens
+
+### Getting Started
+1. **Register/Login**: Use `/api/v1/auth/register` or `/api/v1/auth/login`
+2. **Get JWT Token**: Authenticate with Firebase phone number
+3. **Make Requests**: Use JWT token in Authorization header
+4. **Request Rides**: Use `/api/v1/rides/request` endpoint
+
+### Authentication
+Click the **Authorize** button (🔒) and enter: `Bearer YOUR_JWT_TOKEN`
+    """,
+    contact={
+        "name": "Ehreezoh Support",
+        "email": "support@ehreezoh.app",
+    },
+    license_info={
+        "name": "Proprietary",
+    },
     docs_url="/api/docs" if settings.DEBUG else None,
     redoc_url="/api/redoc" if settings.DEBUG else None,
+    openapi_tags=[
+        {
+            "name": "Authentication",
+            "description": "User registration, login, and profile management with Firebase Phone Auth"
+        },
+        {
+            "name": "Rides",
+            "description": "Request, track, and manage rides (moto-taxi and cars)"
+        },
+        {
+            "name": "Drivers",
+            "description": "Driver registration, location updates, and availability management"
+        },
+        {
+            "name": "Payments",
+            "description": "Mobile Money payments and transaction management"
+        },
+        {
+            "name": "Health",
+            "description": "API health check and status endpoints"
+        },
+    ],
     lifespan=lifespan
 )
 
 # Middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Custom CORS handler - more reliable than CORSMiddleware
+@app.middleware("http")
+async def add_cors_headers(request: Request, call_next):
+    """Add CORS headers to all responses"""
+    # Handle preflight OPTIONS requests
+    if request.method == "OPTIONS":
+        response = Response()
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Max-Age"] = "3600"
+        return response
+    
+    # Process the request
+    response = await call_next(request)
+    
+    # Add CORS headers to the response
+    origin = request.headers.get("origin", "*")
+    response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Expose-Headers"] = "*"
+    
+    return response
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
@@ -91,10 +159,14 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # Include routers
-app.include_router(health.router, prefix="/api/v1", tags=["Health"])
-app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
-app.include_router(incidents.router, prefix="/api/v1/incidents", tags=["Incidents"])
-app.include_router(users.router, prefix="/api/v1/user", tags=["User"])
+app.include_router(health.router, prefix="/api/v1")
+app.include_router(auth.router, prefix="/api/v1")
+app.include_router(drivers.router, prefix="/api/v1")
+app.include_router(rides.router, prefix="/api/v1")
+app.include_router(websocket.router, prefix="/api/v1")
+app.include_router(admin.router, prefix="/api/v1")
+app.include_router(incidents.router, prefix="/api/v1")
+app.include_router(users.router, prefix="/api/v1")
 
 
 # Root endpoint
