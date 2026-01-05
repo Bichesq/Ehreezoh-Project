@@ -5,20 +5,20 @@ Ride requests, tracking, and lifecycle management
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, func
+import sqlalchemy
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from geoalchemy2.elements import WKTElement
 import logging
-import uuid
-
 from app.core.database import get_db
 from app.core.auth import get_current_user, get_current_driver
-from app.core.websocket import broadcast_ride_update, EventType, notify_passenger
+from app.core.websocket import broadcast_ride_update, EventType, notify_passenger, notify_driver
 from app.models.user import User
-from app.models.driver import Driver
 from app.models.ride import Ride
+from app.models.driver import Driver
+from app.services.redis_service import redis_service
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +65,12 @@ class RideResponse(BaseModel):
 class RideAction(BaseModel):
     """Generic ride action (accept, start, complete, cancel)"""
     reason: Optional[str] = Field(None, description="Reason for cancellation")
+
+
+class RatingRequest(BaseModel):
+    """Rating submission"""
+    rating: int = Field(..., ge=1, le=5, description="Rating from 1 to 5")
+    review: Optional[str] = Field(None, description="Optional review comment")
 
 
 @router.post("/request", response_model=RideResponse, status_code=status.HTTP_201_CREATED)
@@ -154,8 +160,24 @@ async def request_ride(
     
     if matched_drivers:
         logger.info(f"🎯 Matched {len(matched_drivers)} drivers for ride {new_ride.id}")
-        # TODO: Send push notifications to matched drivers
-        # This will be implemented when we add Firebase Cloud Messaging
+        
+        # Notify each matched driver
+        for driver_data in matched_drivers:
+            # We need the User ID to notify via WebSocket (driver_data has 'user_id')
+            driver_user_id = str(driver_data.get("user_id"))
+            if driver_user_id:
+                await notify_driver(
+                    driver_user_id=driver_user_id,
+                    event_type=EventType.NEW_RIDE_OFFER,
+                    data={
+                        "ride_id": new_ride.id,
+                        "pickup_address": new_ride.pickup_address,
+                        "dropoff_address": new_ride.dropoff_address,
+                        "estimated_fare": float(new_ride.estimated_fare),
+                        "distance_km": float(new_ride.estimated_distance_km),
+                        "pickup_dist_km": float(driver_data.get("distance_km", 0))
+                    }
+                )
     else:
         logger.warning(f"⚠️ No drivers available for ride {new_ride.id}")
     
@@ -253,6 +275,9 @@ async def accept_ride(
     db.commit()
     db.refresh(ride)
     
+    # Update Redis with active ride so location updates are broadcasted
+    redis_service.set_driver_current_ride(str(driver.user_id), str(ride.id))
+
     logger.info(f"✅ Ride accepted: {ride.id} by driver {driver.id}")
     
     # Broadcast ride update via WebSocket
@@ -315,6 +340,17 @@ async def start_ride(
     
     logger.info(f"🏁 Ride started: {ride.id}")
     
+    # Broadcast ride update via WebSocket
+    await broadcast_ride_update(
+        ride_id=str(ride.id),
+        event_type=EventType.RIDE_STARTED,
+        ride_data={
+            "id": str(ride.id),
+            "status": ride.status,
+            "started_at": ride.started_at.isoformat() if ride.started_at else None
+        }
+    )
+    
     return ride.to_dict()
 
 
@@ -366,6 +402,18 @@ async def complete_ride(
     db.refresh(ride)
     
     logger.info(f"🎉 Ride completed: {ride.id}")
+    
+    # Broadcast ride update via WebSocket
+    await broadcast_ride_update(
+        ride_id=str(ride.id),
+        event_type=EventType.RIDE_COMPLETED,
+        ride_data={
+            "id": str(ride.id),
+            "status": ride.status,
+            "final_fare": ride.final_fare,
+            "completed_at": ride.completed_at.isoformat() if ride.completed_at else None
+        }
+    )
     
     return ride.to_dict()
 
@@ -430,6 +478,18 @@ async def cancel_ride(
     
     logger.info(f"❌ Ride cancelled: {ride.id} by {ride.cancelled_by}")
     
+    # Broadcast ride update via WebSocket
+    await broadcast_ride_update(
+        ride_id=str(ride.id),
+        event_type=EventType.RIDE_CANCELLED,
+        ride_data={
+            "id": str(ride.id),
+            "status": ride.status,
+            "cancelled_by": ride.cancelled_by,
+            "cancellation_reason": ride.cancellation_reason
+        }
+    )
+    
     return ride.to_dict()
 
 
@@ -462,9 +522,180 @@ async def get_my_rides(
         )
     )
     
+    
     if status:
         query = query.filter(Ride.status == status)
     
     rides = query.order_by(Ride.requested_at.desc()).limit(limit).all()
     
     return [ride.to_dict() for ride in rides]
+
+
+@router.post("/{ride_id}/rate")
+async def rate_ride(
+    ride_id: str,
+    rating: RatingRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Rate a ride (Passenger -> Driver or Driver -> Passenger)
+    """
+    ride = db.query(Ride).filter(Ride.id == ride_id).first()
+    
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+
+    if ride.status != "completed":
+         raise HTTPException(status_code=400, detail="Ride must be completed to rate")
+
+    # Determine who is rating whom
+    is_passenger = ride.passenger_id == current_user.id
+    
+    # Check if driver
+    driver = db.query(Driver).filter(Driver.user_id == current_user.id).first()
+    is_driver = driver and ride.driver_id == driver.id
+
+    if not is_passenger and not is_driver:
+        raise HTTPException(status_code=403, detail="Not a participant")
+
+    if is_passenger:
+        if ride.driver_rating:
+             raise HTTPException(status_code=400, detail="Already rated driver")
+        ride.driver_rating = rating.rating
+        ride.driver_review = rating.review
+        
+        # Update Driver Average Rating
+        driver_to_update = db.query(Driver).filter(Driver.id == ride.driver_id).first()
+        if driver_to_update:
+            # Simple average update logic (better to do aggregation query in real app)
+            # New Avg = ((Old Avg * Count) + New Rating) / (Count + 1)
+            # We use float() for calculation
+            current_avg = float(driver_to_update.average_rating or 0)
+            total_ratings_count = db.query(Ride).filter(
+                Ride.driver_id == driver_to_update.id, 
+                Ride.driver_rating.isnot(None)
+            ).count()
+            
+            # Since we just set the rating on this ride but didn't commit, it's counted? 
+            # No, commit happens later. So count is Count_Before.
+            # But simpler: Just re-calculate average from DB after commit?
+            # Optimization: Let's do it after commit or trust simple math.
+            pass 
+
+    elif is_driver:
+        if ride.passenger_rating:
+             raise HTTPException(status_code=400, detail="Already rated passenger")
+        ride.passenger_rating = rating.rating
+        ride.passenger_review = rating.review
+
+    db.commit()
+    
+    # Recalculate averages (robust way)
+    if is_passenger:
+         # Update Driver Average
+         avg = db.query(Ride).filter(Ride.driver_id == ride.driver_id, Ride.driver_rating.isnot(None)).with_entities(
+             func.avg(Ride.driver_rating)
+         ).scalar()
+         if avg:
+             driver_profile = db.query(Driver).filter(Driver.id == ride.driver_id).first()
+             driver_profile.average_rating = float(avg)
+             db.commit()
+
+    return {"message": "Rating submitted successfully"}
+
+
+# Payment Endpoint
+from app.models.payment import Payment, PaymentStatus, PaymentProvider
+from app.services.payment_provider import payment_provider
+from pydantic import BaseModel
+
+class PaymentRequest(BaseModel):
+    provider: str
+    phone_number: str
+
+@router.post("/{ride_id}/pay")
+async def pay_ride(
+    ride_id: str, 
+    request: PaymentRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    ride = db.query(Ride).filter(Ride.id == ride_id).first()
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+        
+    # Check if already paid
+    existing_payment = db.query(Payment).filter(
+        Payment.ride_id == ride_id, 
+        Payment.status == PaymentStatus.SUCCESS
+    ).first()
+    
+    if existing_payment:
+         return {"message": "Ride already paid", "status": "success"}
+
+    # Calculate amount (use final fare or estimated)
+    amount = ride.final_fare if ride.final_fare else ride.estimated_fare
+    
+    if not amount:
+         raise HTTPException(status_code=400, detail="Fare amount not set")
+
+    try:
+        # Validate Provider
+        if request.provider.lower() not in [p.value for p in PaymentProvider]:
+             # Allow fuzzy match for demo
+             pass
+
+        # 1. Create Payment Record (Pending)
+        payment = Payment(
+            ride_id=ride_id,
+            amount=amount,
+            provider=request.provider,
+            phone_number=request.phone_number,
+            status=PaymentStatus.PENDING
+        )
+        db.add(payment)
+        db.commit()
+        
+        # 2. Call Provider
+        if request.provider.lower() == 'cash':
+             payment.status = PaymentStatus.SUCCESS
+             payment.transaction_id = "CASH-HANDOVER"
+        else:
+             tx_id = await payment_provider.initiate_payment(request.phone_number, float(amount), request.provider)
+             payment.transaction_id = tx_id
+             payment.status = PaymentStatus.SUCCESS # In real app, this would be PENDING
+        
+        db.commit()
+        
+        return {
+            "message": "Payment successful",
+            "status": payment.status,
+            "transaction_id": payment.transaction_id
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/{ride_id}/debug_broadcast_completion")
+async def debug_broadcast_completion(
+    ride_id: str,
+    db: Session = Depends(get_db)
+):
+    ride = db.query(Ride).filter(Ride.id == ride_id).first()
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+        
+    await broadcast_ride_update(
+        ride_id=str(ride.id),
+        event_type=EventType.RIDE_COMPLETED,
+        ride_data={
+            "id": str(ride.id),
+            "status": "completed",
+            "final_fare": ride.final_fare or ride.estimated_fare,
+            "completed_at": datetime.utcnow().isoformat()
+        }
+    )
+    return {"message": "Broadcast sent"}

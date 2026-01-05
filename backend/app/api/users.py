@@ -9,7 +9,26 @@ from typing import Optional
 
 from app.core.database import get_db
 
-router = APIRouter()
+from app.core.auth import get_current_user
+from app.models.user import User
+
+router = APIRouter(prefix="/users", tags=["Users"])
+
+
+class DeviceTokenRequest(BaseModel):
+    token: str
+
+
+@router.post("/device-token")
+async def update_device_token(
+    request: DeviceTokenRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Update user's device push token"""
+    current_user.device_token = request.token
+    db.commit()
+    return {"success": True, "message": "Device token updated"}
 
 
 class UserProfileResponse(BaseModel):

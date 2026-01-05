@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     # Application
     APP_NAME: str = "Ehreezoh"
     APP_VERSION: str = "1.0.0"
+    API_V1_STR: str = "/api/v1"
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
     SECRET_KEY: str = "change-this-secret-key-in-production"
@@ -76,6 +77,7 @@ class Settings(BaseSettings):
     DEFAULT_SEARCH_RADIUS: int = 5000  # 5km
     MAX_SEARCH_RADIUS: int = 50000  # 50km
     LOCATION_FUZZING_METERS: int = 50
+    MAPBOX_ACCESS_TOKEN: str = "pk.eyJ1IjoiYmljaGVzcSIsImEiOiJjbTFuM3Q3ODIwMDBwMmtzMDZ6Z3Q0NmE3In0.J7B_Y3t3d3k1z_3_4_5_6" # Placeholder
     
     # Push Notifications
     FCM_SERVER_KEY: str = ""

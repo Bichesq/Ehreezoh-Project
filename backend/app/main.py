@@ -13,7 +13,9 @@ import time
 
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.api import auth, incidents, users, health, drivers, rides, websocket, admin
+from app.api import auth, incidents, users, health, drivers, rides, websocket, admin, payments, routes, analytics, gamification, maps, community, social, chat, profiles, digest
+
+
 
 # Configure logging
 logging.basicConfig(
@@ -33,8 +35,19 @@ async def lifespan(app: FastAPI):
     
     # Create database tables (in production, use Alembic migrations)
     if settings.ENVIRONMENT == "development":
+        logger.info("Checking database extensions...")
+        from sqlalchemy import text
+        try:
+            with engine.connect() as connection:
+                connection.execute(text("CREATE EXTENSION IF NOT EXISTS postgis CASCADE"))
+                connection.commit()
+                logger.info("PostGIS extension enabled.")
+        except Exception as e:
+            logger.warning(f"Could not enable PostGIS extension: {e}")
+            logger.warning("If you are using a cloud database, ensure PostGIS is enabled manually.")
+
         logger.info("Creating database tables...")
-        # Base.metadata.create_all(bind=engine)
+        Base.metadata.create_all(bind=engine)
     
     yield
     
@@ -161,12 +174,22 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Include routers
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
-app.include_router(drivers.router, prefix="/api/v1")
-app.include_router(rides.router, prefix="/api/v1")
+app.include_router(drivers.router, prefix=f"{settings.API_V1_STR}")
+app.include_router(rides.router, prefix=f"{settings.API_V1_STR}")
+app.include_router(payments.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(websocket.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
 app.include_router(incidents.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
+app.include_router(routes.router, prefix="/api/v1")
+app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
+app.include_router(gamification.router, prefix="/api/v1/gamification", tags=["Gamification"])
+app.include_router(maps.router, prefix="/api/v1") # Public maps proxy
+app.include_router(community.router, prefix="/api/v1", tags=["Community"])
+app.include_router(social.router, prefix="/api/v1", tags=["Social"])
+app.include_router(chat.router, prefix="/api/v1", tags=["Chat"])
+app.include_router(profiles.router, prefix="/api/v1", tags=["Profiles"])
+app.include_router(digest.router, prefix="/api/v1", tags=["Digest"])
 
 
 # Root endpoint

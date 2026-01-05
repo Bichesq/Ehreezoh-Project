@@ -76,6 +76,16 @@ def verify_firebase_token(id_token: str) -> dict:
         HTTPException: If token is invalid
     """
     try:
+        # Dev Bypass: Check for mock token in development
+        if settings.ENVIRONMENT == "development" and id_token.startswith("mock_token_"):
+            phone_number = id_token.replace("mock_token_", "")
+            logger.warning(f"🔓 Using Dev Bypass for phone: {phone_number}")
+            return {
+                "uid": f"mock_uid_{phone_number}",
+                "phone_number": phone_number,
+                "firebase": {"sign_in_provider": "phone"}
+            }
+
         decoded_token = firebase_auth.verify_id_token(id_token)
         return decoded_token
     except firebase_auth.InvalidIdTokenError:

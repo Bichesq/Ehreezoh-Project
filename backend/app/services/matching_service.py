@@ -15,6 +15,7 @@ from app.models.ride import Ride
 from app.services.redis_service import redis_service
 
 logger = logging.getLogger(__name__)
+from app.core.debug import debug_log
 
 
 class MatchingService:
@@ -49,6 +50,7 @@ class MatchingService:
         try:
             # Step 1: Get nearby drivers from Redis geospatial index
             logger.info(f"🔎 Redis: Finding nearby drivers for {pickup_latitude}, {pickup_longitude}")
+            
             nearby_driver_ids = self.redis.find_nearby_drivers(
                 latitude=pickup_latitude,
                 longitude=pickup_longitude,
@@ -61,15 +63,16 @@ class MatchingService:
                 logger.warning(f"No drivers found within {radius_km}km")
                 return []
             
-            driver_ids = [d["driver_id"] for d in nearby_driver_ids]
+            # Note: Redis stores user_id as "driver_id"
+            driver_user_ids = [d["driver_id"] for d in nearby_driver_ids]
             
             # Step 2: Query database for driver details and filter
-            logger.info(f"🔎 DB: Querying details for {len(driver_ids)} drivers")
+            logger.info(f"🔎 DB: Querying details for {len(driver_user_ids)} drivers")
             drivers = db.query(Driver, User).join(
                 User, Driver.user_id == User.id
             ).filter(
                 and_(
-                    Driver.id.in_(driver_ids),
+                    Driver.user_id.in_(driver_user_ids),
                     Driver.is_online == True,
                     Driver.is_available == True,
                     Driver.is_verified == True,
@@ -80,6 +83,7 @@ class MatchingService:
             
             # Step 3: Combine Redis distance data with database details
             available_drivers = []
+            # Map user_id to distance
             distance_map = {d["driver_id"]: d["distance_km"] for d in nearby_driver_ids}
             
             for driver, user in drivers:
@@ -101,7 +105,7 @@ class MatchingService:
                     "vehicle_plate_number": driver.vehicle_plate_number,
                     "average_rating": float(driver.average_rating) if driver.average_rating else 0.0,
                     "total_rides": driver.total_rides,
-                    "distance_km": distance_map.get(driver.id, 0.0),
+                    "distance_km": distance_map.get(driver.user_id, 0.0),
                     "current_latitude": float(driver.current_latitude) if driver.current_latitude else None,
                     "current_longitude": float(driver.current_longitude) if driver.current_longitude else None
                 })
@@ -115,6 +119,7 @@ class MatchingService:
             matched_drivers = available_drivers[:max_drivers]
             
             logger.info(f"✅ Matched {len(matched_drivers)} drivers for ride (type: {ride_type})")
+            debug_log(f"Matching: Found {len(matched_drivers)} drivers. Details: {available_drivers}")
             return matched_drivers
             
         except Exception as e:

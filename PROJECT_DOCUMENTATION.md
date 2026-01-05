@@ -53,13 +53,14 @@ Become Cameroon's leading mobility platform by providing affordable, safe, and r
 
 ### MVP Features (Phase 1) - Prioritized
 
-#### PRIMARY: Ride-Hailing Platform (70% of MVP effort)
+#### CO-PRIMARY: Ride-Hailing Platform (50% of MVP effort)
 
 **Passenger App:**
 - ✅ Request rides with pickup/destination selection
 - ✅ Real-time driver matching and tracking
 - ✅ Fare estimation and negotiation (InDrive-style)
 - ✅ Multiple ride types (moto-taxi, economy car, comfort car)
+- ✅ **Intelligent route selection** (avoid incidents, traffic-aware)
 - ✅ In-app payment (Mobile Money: MTN, Orange)
 - ✅ Trip history and receipts
 - ✅ Driver ratings and reviews
@@ -70,7 +71,9 @@ Become Cameroon's leading mobility platform by providing affordable, safe, and r
 - ✅ Accept/reject ride requests
 - ✅ View passenger details and destination
 - ✅ Counter-offer fare (negotiation)
-- ✅ Turn-by-turn navigation
+- ✅ **Traffic-aware turn-by-turn navigation**
+- ✅ **Incident heatmap view** (position strategically)
+- ✅ **Earn rewards for verified incident reports** (100 XAF/report)
 - ✅ Earnings dashboard
 - ✅ Instant cashout to Mobile Money
 - ✅ Passenger ratings
@@ -85,16 +88,54 @@ Become Cameroon's leading mobility platform by providing affordable, safe, and r
 - ✅ Rating and review system
 - ✅ Driver verification and onboarding
 
-#### SECONDARY: Traffic Intelligence (30% of MVP effort)
+#### CO-PRIMARY: Intelligent Route Guidance powered by Community Data (50% of MVP effort)
 
-- ✅ View traffic incidents on map (both apps)
-- ✅ Report incidents (traffic jam, accident, road hazard)
-- ✅ Community verification (upvote/downvote)
-- ✅ Traffic-aware routing suggestions
-- ✅ Push notifications for route incidents
+**Real-Time Incident Intelligence:**
+- ✅ Crowdsourced incident reporting (traffic, accidents, hazards, police*)
+- ✅ Photo evidence and detailed descriptions
+- ✅ Community verification system (upvote/downvote credibility scoring)
+- ✅ Real-time incident map overlay with severity indicators
+- ✅ Auto-expiration of stale incidents (4 hours or admin-resolved)
+
+**Smart Route Guidance:**
+- ✅ **Route analysis engine:** Score routes based on incident severity
+- ✅ **Alternative route suggestions:** Avoid high-risk areas (accidents, severe traffic)
+- ✅ **Predictive routing:** Use historical patterns (e.g., "Route A has traffic 7-9am Mon-Fri")
+- ✅ **Proactive notifications:** Alert users BEFORE encountering incidents
+- ✅ **Multi-criteria routing:** "Safest Route" vs "Fastest Route" vs "Balanced"
+- ✅ **Real-time rerouting:** Auto-recalculate if new incident reported on active route
+
+**Driver Benefits:**
+- ✅ **Earn 100 XAF per verified incident report** (verified drivers only)
+- ✅ **Incident heatmap:** View high-incident areas to avoid, high-demand areas to position
+- ✅ **Historical hotspot data:** Optimize positioning for more ride requests
+- ⏳ **Police checkpoint awareness** (feature built, awaiting legal approval)*
+
+**Passenger Benefits:**
+- ✅ **Informed route selection:** See incidents on each route option before trip
+- ✅ **Safety-first routing:** Prioritize routes with fewer/less severe incidents
+- ✅ **Time savings:** Avoid traffic jams and road blockages
+- ✅ **Community contribution:** Report incidents to help others
+
+**Cameroon-Specific Advantages:**
+- ✅ **Address infrastructure gaps:** No reliable official traffic data available
+- ✅ **Community-powered:** Doesn't rely on government traffic systems
+- ✅ **Offline support:** Routes and recent incidents cached locally
+- ✅ **Cultural fit:** Formalizes existing WhatsApp-based traffic sharing culture
+
+**Technical Implementation:**
+- ✅ Mapbox Directions API integration (3-5 alternative routes)
+- ✅ PostGIS spatial queries (incidents within X meters of route)
+- ✅ Route scoring algorithm (severity × confirmations × recency)
+- ✅ WebSocket-based real-time alerts (geofenced subscription)
+- ✅ Historical pattern analysis (daily batch jobs)
+- ✅ Redis geospatial indexing for fast lookups
+
+*Note: Police checkpoint reporting feature is fully built but gated behind permission-based access control. Only special user groups can view/report. Feature will be enabled after legal approval.
 
 ### Excluded from MVP (Phase 2+)
-- ❌ Police checkpoint reporting (pending legal review)
+
+- ⏳ **Police checkpoint reporting** (feature built, pending legal approval - permission-gated)
 - ❌ Scheduled rides / ride reservations
 - ❌ Corporate accounts for businesses
 - ❌ Driver referral program

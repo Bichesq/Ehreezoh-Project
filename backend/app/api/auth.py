@@ -239,11 +239,18 @@ async def get_current_user_profile(
     return current_user.to_dict()
 
 
-@router.patch("/me")
+
+class UserUpdate(BaseModel):
+    """User profile update request"""
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    language_preference: Optional[str] = None
+    profile_photo_url: Optional[str] = None
+
+
+@router.patch("/me", response_model=UserResponse)
 async def update_profile(
-    full_name: Optional[str] = None,
-    email: Optional[str] = None,
-    language_preference: Optional[str] = None,
+    user_update: UserUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -254,19 +261,22 @@ async def update_profile(
     
     **Returns:** Updated user profile
     """
-    if full_name is not None:
-        current_user.full_name = full_name
+    if user_update.full_name is not None:
+        current_user.full_name = user_update.full_name
     
-    if email is not None:
-        current_user.email = email
+    if user_update.email is not None:
+        current_user.email = user_update.email
+        
+    if user_update.profile_photo_url is not None:
+        current_user.profile_photo_url = user_update.profile_photo_url
     
-    if language_preference is not None:
-        if language_preference not in ["fr", "en"]:
+    if user_update.language_preference is not None:
+        if user_update.language_preference not in ["fr", "en"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Language must be 'fr' or 'en'"
             )
-        current_user.language_preference = language_preference
+        current_user.language_preference = user_update.language_preference
     
     db.commit()
     db.refresh(current_user)

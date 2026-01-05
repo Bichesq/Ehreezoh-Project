@@ -79,6 +79,7 @@ class Driver(Base):
         return {
             "id": self.id,
             "user_id": self.user_id,
+            "driver_license_number": self.driver_license_number,
             "vehicle_type": self.vehicle_type,
             "vehicle_make": self.vehicle_make,
             "vehicle_model": self.vehicle_model,
@@ -90,6 +91,7 @@ class Driver(Base):
             "verification_status": self.verification_status,
             "average_rating": float(self.average_rating) if self.average_rating else 0.0,
             "total_rides": self.total_rides,
+            "completed_rides": self.completed_rides,
             "current_latitude": float(self.current_latitude) if self.current_latitude else None,
             "current_longitude": float(self.current_longitude) if self.current_longitude else None,
             "last_location_update": self.last_location_update.isoformat() if self.last_location_update else None

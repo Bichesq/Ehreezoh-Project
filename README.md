@@ -15,12 +15,13 @@ Become Cameroon's leading mobility platform by providing affordable, safe, and r
 
 ## 📱 Features
 
-### PRIMARY: Ride-Hailing Platform (70% of MVP)
+### 🚗 CO-PRIMARY: Ride-Hailing Platform (50% of MVP)
 
 **For Passengers:**
 - 🚕 **Request Rides** - Moto-taxis, economy cars, and comfort cars
 - 💰 **Fare Negotiation** - InDrive-style transparent pricing
 - 📍 **Real-time Tracking** - Track your driver's location and ETA
+- 🛣️ **Intelligent Route Selection** - Choose routes that avoid traffic and accidents
 - 💳 **Flexible Payments** - Cash, MTN Mobile Money, Orange Money
 - ⭐ **Driver Ratings** - Rate and review your driver
 - 📜 **Trip History** - View all past rides and receipts
@@ -31,20 +32,43 @@ Become Cameroon's leading mobility platform by providing affordable, safe, and r
 - 💼 **Flexible Earnings** - Work when you want, earn on your terms
 - 📱 **Easy Onboarding** - Simple registration and verification
 - 💵 **Instant Payouts** - Cash out to Mobile Money anytime
-- 🗺️ **Smart Navigation** - Turn-by-turn directions with traffic awareness
+- 🗺️ **Smart Navigation** - Traffic-aware turn-by-turn directions
+- 💰 **Earn Rewards** - Get 100 XAF for each verified incident report
 - 📊 **Earnings Dashboard** - Track your daily, weekly, monthly income
 - 🤝 **Fair Commission** - Only 12-15% (vs Uber's 25%)
 - ⭐ **Passenger Ratings** - Rate passengers for better matches
 - 🏍️ **Moto-Taxi Support** - Designed for Cameroon's most popular transport
 
-### SECONDARY: Traffic Intelligence (30% of MVP)
+### 🗺️ CO-PRIMARY: Intelligent Route Guidance (50% of MVP)
 
-- 🗺️ **Interactive Traffic Map** - Real-time traffic visualization
-- 📍 **Incident Reporting** - Report traffic jams, accidents, road hazards
-- 📸 **Photo Evidence** - Upload photos of incidents
-- 👍 **Community Verification** - Upvote/downvote for accuracy
-- 🔔 **Route Alerts** - Get notified of incidents on your route
-- 🚦 **Traffic-Aware Routing** - Avoid congested areas
+**Real-Time Intelligence:**
+- 📍 **Crowdsourced Incident Reports** - Traffic, accidents, road hazards, police checkpoints*
+- 📸 **Photo Evidence** - Upload photos for verification
+- 👥 **Community Verification** - Upvote/downvote system for credibility
+- 🔴 **Live Incident Map** - See real-time traffic problems on your route
+- ⏰ **Auto-Expiration** - Stale incidents removed automatically
+
+**Smart Routing:**
+- 🧠 **Route Scoring** - Each route scored based on incident severity
+- 🛣️ **Alternative Routes** - Avoid accidents, traffic jams, and blockages
+- 📊 **Predictive Routing** - Learn traffic patterns (e.g., "Avenue Kennedy has traffic 7-9am Mon-Fri")
+- 🔔 **Proactive Alerts** - Get warned BEFORE you hit traffic
+- ⚡ **Real-Time Rerouting** - Auto-recalculate if new incident reported
+- 🎯 **Multi-Criteria Options** - "Safest Route" vs "Fastest Route" vs "Balanced"
+
+**Driver Benefits:**
+- 💰 **Earn 100 XAF** per verified incident report (verified drivers only)
+- 🗺️ **Incident Heatmap** - See where to avoid and where to position for rides
+- 📈 **Historical Hotspots** - Optimize your location for maximum earnings
+- 🚧 **Police Checkpoint Awareness** (feature ready, awaiting legal approval)*
+
+**Why It Matters:**
+- 🇨🇲 **Cameroon-First** - No official traffic data? Community fills the gap
+- 🔄 **Offline Support** - Recent incidents cached for offline access
+- 📱 **Cultural Fit** - Formalizes WhatsApp traffic groups into one app
+- ⚡ **Time & Money Savings** - Avoid jams, get passengers faster
+
+*Police checkpoint feature built but permission-gated. Only special users can access until legal approval.
 
 ### Coming Soon (Phase 2+)
 - 📅 Scheduled rides and reservations
@@ -207,7 +231,7 @@ cd cameroon-traffic-app
 # 2. Backend setup
 cd backend
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+source venv/Scripts/activate  # Windows: venv/Scripts/activate
 pip install -r requirements.txt
 cp .env.example .env
 cd ..

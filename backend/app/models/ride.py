@@ -80,7 +80,10 @@ class Ride(Base):
     # Relationships
     passenger = relationship("User", foreign_keys=[passenger_id], back_populates="rides_as_passenger")
     driver = relationship("Driver", foreign_keys=[driver_id], back_populates="rides")
-    payment = relationship("Payment", back_populates="ride", uselist=False)
+    
+    # Use list=True by default for relationships unless one-to-one is clearer, but Ride->Payment is usually 1-to-many (attempts) or 1-to-1 (success)
+    # The model definition in `payment.py` says `back_populates="ride"`.
+    payments = relationship("Payment", back_populates="ride")
     
     def __repr__(self):
         return f"<Ride {self.id} ({self.status})>"

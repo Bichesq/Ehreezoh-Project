@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+from app.core.debug import debug_log
 
 
 class RedisService:
@@ -50,7 +51,7 @@ class RedisService:
         driver_id: str,
         latitude: float,
         longitude: float,
-        ttl_seconds: int = 30
+        ttl_seconds: int = 300
     ) -> bool:
         """
         Update driver's current location in Redis geospatial index
@@ -86,9 +87,10 @@ class RedisService:
                 json.dumps(location_data)
             )
             
-            logger.debug(f"📍 Updated location for driver {driver_id}: ({latitude}, {longitude})")
+            debug_log(f"📍 Updated location for driver {driver_id}: ({latitude}, {longitude}) in Redis")
             return True
         except Exception as e:
+            debug_log(f"❌ Failed to update driver location: {e}")
             logger.error(f"Failed to update driver location: {e}")
             return False
     
@@ -147,7 +149,9 @@ class RedisService:
                     "distance_km": round(float(distance_km), 2)
                 })
             
+            
             logger.info(f"🔍 Found {len(nearby_drivers)} drivers within {radius_km}km")
+            debug_log(f"🔍 Redis: Found {len(nearby_drivers)} drivers near ({latitude}, {longitude}): {nearby_drivers}")
             return nearby_drivers
         except Exception as e:
             logger.error(f"Failed to find nearby drivers: {e}")

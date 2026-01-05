@@ -22,6 +22,7 @@ class User(Base):
     phone_number = Column(String(20), unique=True, nullable=False, index=True)
     phone_hash = Column(String(255), unique=True, nullable=False)  # bcrypt hash
     firebase_uid = Column(String(128), unique=True, nullable=False, index=True)
+    device_token = Column(String(255), nullable=True)  # Expo Push Token
     
     # Profile
     full_name = Column(String(100))
@@ -37,6 +38,18 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_banned = Column(Boolean, default=False)
     is_verified = Column(Boolean, default=False)
+
+    # Gamification
+    reputation_score = Column(Integer, default=100)
+    points = Column(Integer, default=0)
+    
+    # Community Stats (for badges and trust)
+    trust_score = Column(Integer, default=0)  # Derived from accurate reports
+    total_reports = Column(Integer, default=0)  # Count of all incident reports
+    total_people_helped = Column(Integer, default=0)  # People who avoided incidents
+    current_streak = Column(Integer, default=0)  # Current daily streak
+    longest_streak = Column(Integer, default=0)  # Best streak ever
+    last_report_date = Column(DateTime, nullable=True)  # For streak calculation
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -62,5 +75,11 @@ class User(Base):
             "is_passenger": self.is_passenger,
             "is_driver": self.is_driver,
             "is_verified": self.is_verified,
+            "reputation_score": self.reputation_score,
+            "points": self.points,
+            "trust_score": self.trust_score or 0,
+            "total_reports": self.total_reports or 0,
+            "total_people_helped": self.total_people_helped or 0,
+            "current_streak": self.current_streak or 0,
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
