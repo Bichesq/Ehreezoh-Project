@@ -281,6 +281,8 @@ async def get_incident_feed(
         "limit": limit,
         "total": total,
         "has_more": (page * limit) < total
+    }
+
 class VerificationRequest(BaseModel):
     verification_type: str  # 'still_there' or 'all_clear'
 
