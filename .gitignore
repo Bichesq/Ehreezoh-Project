@@ -180,6 +180,8 @@ $RECYCLE.BIN/
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+backend/firebase-credentials.json
+backend/token.json
 
 # Sentry
 .sentryclirc
