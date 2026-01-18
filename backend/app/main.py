@@ -129,8 +129,16 @@ async def add_cors_headers(request: Request, call_next):
         response.headers["Access-Control-Max-Age"] = "3600"
         return response
     
-    # Process the request
-    response = await call_next(request)
+    # Process the request and ensure CORS headers even on errors
+    try:
+        response = await call_next(request)
+    except Exception as e:
+        logger.error(f"Error processing request: {e}", exc_info=True)
+        # Create error response with CORS headers
+        response = JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error", "error": str(e) if settings.DEBUG else "An error occurred"}
+        )
     
     # Add CORS headers to the response
     origin = request.headers.get("origin", "*")

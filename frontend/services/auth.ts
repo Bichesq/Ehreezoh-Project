@@ -20,6 +20,18 @@ class AuthService {
   initRecaptcha(containerId: string = 'recaptcha-container'): void {
     if (typeof window === 'undefined') return;
 
+    // Check if container element exists
+    const container = document.getElementById(containerId);
+    if (!container) {
+      console.error(`reCAPTCHA container with id "${containerId}" not found`);
+      return;
+    }
+
+    // Clean up existing verifier if any
+    if (this.recaptchaVerifier) {
+      this.recaptchaVerifier.clear();
+    }
+
     this.recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
       size: 'invisible',
       callback: () => {

@@ -15,10 +15,13 @@ export default function LoginPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Initialize reCAPTCHA
-    authService.initRecaptcha();
+    // Initialize reCAPTCHA after DOM is ready
+    const timer = setTimeout(() => {
+      authService.initRecaptcha();
+    }, 100);
     
     return () => {
+      clearTimeout(timer);
       authService.cleanup();
     };
   }, []);
@@ -44,26 +47,49 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      console.log('🔐 Verifying OTP...');
       const firebaseToken = await authService.verifyOTP(otp);
+      console.log('✅ OTP verified, Firebase token received');
       
       // Try to login first
       try {
+        console.log('🔑 Attempting login...');
         const { access_token, user } = await authService.login(firebaseToken);
+        console.log('✅ Login successful!');
         localStorage.setItem('access_token', access_token);
         localStorage.setItem('user', JSON.stringify(user));
         router.push('/dashboard');
       } catch (loginError: any) {
+        console.log('❌ Login failed:', loginError);
+        console.log('Error response:', loginError.response);
+        console.log('Error message:', loginError.message);
+        
         // If login fails (user not found), go to registration
-        if (loginError.message.includes('not found')) {
+        const errorMessage = loginError.message?.toLowerCase() || '';
+        const errorDetail = loginError.response?.data?.detail?.toLowerCase() || '';
+        const isUserNotFound = 
+          errorMessage.includes('not found') || 
+          errorMessage.includes('please register') ||
+          errorDetail.includes('not found') ||
+          errorDetail.includes('please register') ||
+          loginError.response?.status === 404;
+        
+        console.log('Is user not found?', isUserNotFound);
+        
+        if (isUserNotFound) {
+          console.log('✨ New user detected! Showing registration form...');
           setStep('register');
           // Store firebase token temporarily
           sessionStorage.setItem('firebase_token', firebaseToken);
+          setError(''); // Clear any error messages
         } else {
+          console.error('Unexpected login error:', loginError);
           throw loginError;
         }
       }
     } catch (err: any) {
-      setError(err.message);
+      console.error('❌ Verification error:', err);
+      setError(err.message || 'An error occurred during verification');
     } finally {
       setIsLoading(false);
     }
